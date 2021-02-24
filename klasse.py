@@ -34,6 +34,14 @@ def generateUnitBasis(normal):
     return np.array((zetaHat, xiHat, etaHat))
 
 
+def unitSphericalDistribution():
+    latDist = np.random.random()*2 - 1
+    sgn = np.sign(latDist); latDist *= sgn
+    latitude = np.pi*(np.sqrt(latDist)/2 if sgn>0 else 1-np.sqrt(latDist)/2)
+    longitude = 2*np.pi*np.random.random()
+    x,y,z = np.sin(latitude)*np.cos(longitude), np.sin(latitude)*np.sin(longitude), np.cos(latitude)
+    return x,y,z
+
 class plane:
     def __init__(self, location, direction):
         self.zeta, self.xi, self.eta = generateUnitBasis(direction)
@@ -101,23 +109,20 @@ class photon:
 
 
 
-pl = plane(np.array((1.0,0.0,0.0)), normalize(np.array((-1.0,-1.0,0.0))))
+pl = plane(np.array((0.7,0.0,0.0)), normalize(np.array((-1.0,-1.0,0.0))))
 photon.planes.append(pl)
 
 poses = []
-for j in range(100):
+for j in range(4):
     for i in range(1000):
-        dir = normalize(np.random.random(3)*2-1)
+        dir = unitSphericalDistribution()
         pos = np.array((-.9,-.9,.0))
         ph = photon(pos.copy(), dir)
-        #current_poses = []
-        #for locstep in ph:
-        #    current_poses.append(locstep)
         current_poses = [pos, ph.jitPrimer()]
         poses.append(np.array(current_poses))
     print("*", end='')
 
-poses = poses[::100]
+poses = poses[::4]
 
 
 
