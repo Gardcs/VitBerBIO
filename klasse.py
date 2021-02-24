@@ -7,9 +7,13 @@ Created on Wed Feb 24 11:04:37 2021
 timestep = 1e-11;
 c = 3e8
 
+
 import numpy as np
 
-xLim = [-1,1]; yLim = [-1,1]; zLim = [-1,1]
+import jitSpeedup as speedUp
+from numba import jit
+
+xLim = [-0.01,1]; yLim = [-1,1]; zLim = [-1,1]
 
 
 isInLim = lambda D1Limits, D1Position: D1Limits[0]<D1Position<D1Limits[1]
@@ -44,6 +48,7 @@ class plane:
         #i retning av planets normal-akse. Planet defineres
         #til å krysse location, og baserer sine koordinater ut fra dette
 
+
     def __le__(self, photon):
         relativeLocationInitial = photon.location - self.location
         zetaCoordinateInitial = dotProd(relativeLocationInitial, self.zeta)
@@ -77,40 +82,45 @@ class photon:
     def nextStep(self, distance=c*timestep):
         return self.location + self.direction * distance
 
-    def __iter__(self):
-        return self
-    
-    def __next__(self):
-        if not enclosed(self.location):
-            raise StopIteration;
+    def jitPrimer(self):
+        planesCoordinates = [plane.location for plane in photon.planes]
+        planesDirections = [plane.zeta for plane in photon.planes]
+        initialCoordinates = self.location
+        initialDirection = self.direction
+        hitPlane, position = speedUp.jitTilHit(planesCoordinates, planesDirections,
+                          initialCoordinates, initialDirection)
 
+        if not hitPlane:
+            del self
+            return position
+        self.location = position
 
         for plane in photon.planes:
-            if plane < self:
-                del self
-                raise StopIteration
+            if(plane < self):
+                return position
 
-        self.location = self.nextStep()
-        return self.location
+        raise Exception("Disagreement of hit between jit-nopython and python")
 
 
 
 
-pl = plane(np.array((1,0,0)), np.array((-1,0,0))/np.sqrt(3))
+pl = plane(np.array((1.0,0.0,0.0)), np.array((-1.0,0.0,0.0))/np.sqrt(3))
 photon.planes.append(pl)
 
 poses = []
-for j in range(10):
-    for i in range(1000):
+for j in range(100):
+    for i in range(100):
         dir = normalize(np.random.random(3)*2-1)
-        pos = np.array((0,0,0))
-        ph = photon(pos, dir)
-        current_poses = []
-        for locstep in ph:
-            current_poses.append(locstep)
-        current_poses = [current_poses[0], current_poses[-1]]
+        pos = np.array((.0,.0,.0))
+        ph = photon(pos.copy(), dir)
+        #current_poses = []
+        #for locstep in ph:
+        #    current_poses.append(locstep)
+        current_poses = [pos, ph.jitPrimer()]
         poses.append(np.array(current_poses))
     print("*", end='')
+
+poses = poses[::20]
 
 
 
@@ -128,8 +138,7 @@ scatterpos = []
 for mrk in pl.markings:
     pos = pl.location + pl.xi*mrk[0] + pl.eta*mrk[1]
     scatterpos.append(pos)
-scatterpos = np.array(scatterpos
-                    )
+scatterpos = np.array(scatterpos)
 ax.scatter(*scatterpos.T,c='r',marker='x')
 
 fig2 = plt.figure()
