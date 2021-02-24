@@ -1,12 +1,14 @@
-from numba import jit
 
-from scenario_variables import c, xLim, yLim, zLim, timestep
+from numba import jit
+import random
+
+from scenario_variables import c, xLim, yLim, zLim, timestep, dissipation_density
 
 
 
 @jit(nopython=True)
 def jitTilHit(planesCoordinates, planesDirection, initialCoordinates, initialDirection):
-    global c, xLim, yLim, zLim, timestep
+    global c, xLim, yLim, zLim, timestep, dissipation_density
 
     def dotProd(a, b):
         return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
@@ -21,15 +23,16 @@ def jitTilHit(planesCoordinates, planesDirection, initialCoordinates, initialDir
         return isEnclosed
 
     def planePhotonCollision(planePosition, photonPosition, planeDirection, photonDirection):
-        initialRelativePos = D3Difference(photonPosition, planePosition)
-        photonPosition[0] += photonDirection[0] * c * timestep
-        photonPosition[1] += photonDirection[1] * c * timestep
-        photonPosition[2] += photonDirection[2] * c * timestep
-        finalRelativePos = D3Difference(photonPosition, planePosition)
+        position = photonPosition.copy()
+        initialRelativePos = D3Difference(position, planePosition)
+        position[0] += photonDirection[0] * c * timestep
+        position[1] += photonDirection[1] * c * timestep
+        position[2] += photonDirection[2] * c * timestep
+        finalRelativePos = D3Difference(position, planePosition)
 
         initialZProjection = dotProd(initialRelativePos, planeDirection)
         finalZProjection = dotProd(finalRelativePos, planeDirection)
-        return initialZProjection * finalZProjection < 0
+        return initialZProjection * finalZProjection <= 0
 
 
     position = initialCoordinates;
@@ -38,13 +41,14 @@ def jitTilHit(planesCoordinates, planesDirection, initialCoordinates, initialDir
         if not enclosed(position):
             return (False, position)
 
+        dissipation_value = dissipation_density(position[0], position[1], position[2])
+        if random.random() < dissipation_value:
+            return (False, position)
+
         for planeCoordinates, planeDirection in zip(planesCoordinates, planesDirection):
             if(planePhotonCollision(planeCoordinates, position,
                                     planeDirection, direction)):
                 #undo ett step fordi jit handler med referanser
-                position[0] -= direction[0] * c * timestep
-                position[1] -= direction[1] * c * timestep
-                position[2] -= direction[2] * c * timestep
                 return (True, position)
 
         position[0] += direction[0] * c * timestep

@@ -12,23 +12,18 @@ import numpy as np
 
 import jitSpeedup as speedUp
 from numba import jit
-
-xLim = [-0.01,1]; yLim = [-1,1]; zLim = [-1,1]
-
+from scenario_variables import xLim, yLim, zLim, c, timestep
 
 isInLim = lambda D1Limits, D1Position: D1Limits[0]<D1Position<D1Limits[1]
-
 enclosed = lambda D3Position: isInLim(xLim, D3Position[0]) & isInLim(yLim, D3Position[1]) & isInLim(zLim, D3Position[2])
-
 crossProd = lambda a, b: np.array(((a[1]*b[2]-a[2]*b[1]), (a[2]*b[0]-a[0]*b[2]), (a[0]*b[1]-a[1]*b[0])))
 dotProd = lambda a,b: a[0]*b[0] + a[1]*b[1] + a[2]*b[2]
 norm = lambda a: np.sqrt(dotProd(a,a))
 orthoProjection = lambda a, b: a - b*dotProd(a,b)/(norm(b)**2)
-
 normalize = lambda a: a/norm(a);
 
 def generateUnitBasis(normal):
-    zetaHat = normal/norm(normal)
+    zetaHat = normalize(normal)
     iHat = np.array([1,0,0]); jHat = np.array([0,1,0])
     if(dotProd(zetaHat, iHat) > 1/np.sqrt(2)):
         xiHat = orthoProjection(iHat, zetaHat)
@@ -77,7 +72,7 @@ class photon:
 
     def __init__(self, location, direction):
         self.location = location
-        self.direction = direction
+        self.direction = normalize(direction)
 
     def nextStep(self, distance=c*timestep):
         return self.location + self.direction * distance
@@ -95,8 +90,10 @@ class photon:
             return position
         self.location = position
 
+
         for plane in photon.planes:
             if(plane < self):
+                del self
                 return position
 
         raise Exception("Disagreement of hit between jit-nopython and python")
@@ -104,14 +101,14 @@ class photon:
 
 
 
-pl = plane(np.array((1.0,0.0,0.0)), np.array((-1.0,0.0,0.0))/np.sqrt(3))
+pl = plane(np.array((1.0,0.0,0.0)), normalize(np.array((-1.0,-1.0,0.0))))
 photon.planes.append(pl)
 
 poses = []
 for j in range(100):
-    for i in range(100):
+    for i in range(1000):
         dir = normalize(np.random.random(3)*2-1)
-        pos = np.array((.0,.0,.0))
+        pos = np.array((-.9,-.9,.0))
         ph = photon(pos.copy(), dir)
         #current_poses = []
         #for locstep in ph:
@@ -120,7 +117,7 @@ for j in range(100):
         poses.append(np.array(current_poses))
     print("*", end='')
 
-poses = poses[::20]
+poses = poses[::100]
 
 
 
@@ -129,7 +126,7 @@ poses = poses[::20]
 
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-fig = plt.figure()
+fig = plt.figure(0)
 ax = fig.add_subplot(111,projection='3d')
 for path in poses:
     ax.plot(*path.T, ':', c="k")
@@ -140,8 +137,10 @@ for mrk in pl.markings:
     scatterpos.append(pos)
 scatterpos = np.array(scatterpos)
 ax.scatter(*scatterpos.T,c='r',marker='x')
+plt.show()
+fig.savefig("illustrasjon.pdf")
 
-fig2 = plt.figure()
+fig2 = plt.figure(1)
 plt.plot(*np.array(pl.markings).T, 'rx')
 
 plt.show()
