@@ -2,7 +2,7 @@
 from numba import jit
 import random
 
-from scenario_variables import c, xLim, yLim, zLim, timestep, dissipation_density
+from scenarioVariables import c, xLim, yLim, zLim, timestep, dissipation_density
 
 
 

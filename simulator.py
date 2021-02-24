@@ -12,7 +12,7 @@ import numpy as np
 
 import jitSpeedup as speedUp
 from numba import jit
-from scenario_variables import xLim, yLim, zLim, c, timestep
+from scenarioVariables import xLim, yLim, zLim, c, timestep
 
 isInLim = lambda D1Limits, D1Position: D1Limits[0]<D1Position<D1Limits[1]
 enclosed = lambda D3Position: isInLim(xLim, D3Position[0]) & isInLim(yLim, D3Position[1]) & isInLim(zLim, D3Position[2])
