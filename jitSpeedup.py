@@ -1,6 +1,7 @@
 
 from numba import jit
 import random
+from numba.typed import List
 
 from scenarioVariables import c, xLim, yLim, zLim, timestep, dissipation_density
 
@@ -44,6 +45,7 @@ def jitTilHit(planesCoordinates, planesDirection, initialCoordinates, initialDir
         dissipation_value = dissipation_density(position[0], position[1], position[2])
         if random.random() < dissipation_value:
             return (False, position)
+
 
         for planeCoordinates, planeDirection in zip(planesCoordinates, planesDirection):
             if(planePhotonCollision(planeCoordinates, position,

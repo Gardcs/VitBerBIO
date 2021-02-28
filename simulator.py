@@ -14,6 +14,9 @@ import jitSpeedup as speedUp
 from numba import jit
 from scenarioVariables import xLim, yLim, zLim, c, timestep
 
+import numba
+from numba.typed import List
+
 isInLim = lambda D1Limits, D1Position: D1Limits[0]<D1Position<D1Limits[1]
 enclosed = lambda D3Position: isInLim(xLim, D3Position[0]) & isInLim(yLim, D3Position[1]) & isInLim(zLim, D3Position[2])
 crossProd = lambda a, b: np.array(((a[1]*b[2]-a[2]*b[1]), (a[2]*b[0]-a[0]*b[2]), (a[0]*b[1]-a[1]*b[0])))
@@ -43,8 +46,11 @@ def unitSphericalDistribution():
     return x,y,z
 
 class plane:
-    def __init__(self, location, direction):
-        self.zeta, self.xi, self.eta = generateUnitBasis(direction)
+    def __init__(self, location, direction, **kwargs):
+        if("basis" in kwargs):
+            self.xi, self.eta, self.zeta = kwargs["basis"];
+        else:
+            self.zeta, self.xi, self.eta = generateUnitBasis(direction)
         self.location = location
         self.markings = []
         #skaper en basis (xi, eta, zeta) for planet med 'direction'(=zeta) som enhetsvektor
@@ -86,8 +92,8 @@ class photon:
         return self.location + self.direction * distance
 
     def jitPrimer(self):
-        planesCoordinates = [plane.location for plane in photon.planes]
-        planesDirections = [plane.zeta for plane in photon.planes]
+        planesCoordinates = List([List(plane.location) for plane in photon.planes])
+        planesDirections = List([List(plane.zeta) for plane in photon.planes])
         initialCoordinates = self.location
         initialDirection = self.direction
         hitPlane, position = speedUp.jitTilHit(planesCoordinates, planesDirections,
@@ -108,12 +114,13 @@ class photon:
 
 
 
-
+'''
 pl = plane(np.array((0.7,0.0,0.0)), normalize(np.array((-1.0,-1.0,0.0))))
 photon.planes.append(pl)
 
 poses = []
-for j in range(4):
+nonvis_pts = 200
+for j in range(nonvis_pts):
     for i in range(1000):
         dir = unitSphericalDistribution()
         pos = np.array((-.9,-.9,.0))
@@ -122,7 +129,7 @@ for j in range(4):
         poses.append(np.array(current_poses))
     print("*", end='')
 
-poses = poses[::4]
+poses = poses[::nonvis_pts]
 
 
 
@@ -141,11 +148,11 @@ for mrk in pl.markings:
     pos = pl.location + pl.xi*mrk[0] + pl.eta*mrk[1]
     scatterpos.append(pos)
 scatterpos = np.array(scatterpos)
-ax.scatter(*scatterpos.T,c='r',marker='x')
+ax.scatter(*scatterpos.T,c='r',marker='o', s=0.1)
 plt.show()
 fig.savefig("illustrasjon.pdf")
 
 fig2 = plt.figure(1)
-plt.plot(*np.array(pl.markings).T, 'rx')
+plt.plot(*np.array(pl.markings).T, 'kx', markersize=2)
 
-plt.show()
+plt.show()'''
