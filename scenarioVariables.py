@@ -4,7 +4,7 @@ zLim = (-3.0, 3.0);
 timestep = 1e-10;
 c = 3e8
 
-K1 = 6e9
+K1 = 9e9
 K2 = 0.02e9
 
 from numba import jit
